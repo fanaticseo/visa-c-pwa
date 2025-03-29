@@ -26,12 +26,12 @@ export default function App() {
   }
 
   const validerSejours = () => {
-    const tousValides = nouveauxSejours.every(s => s.entree && s.sortie)
+    const tousValides = nouveauxSejours.every(s => s.entree)
     if (tousValides) {
       setSejours([...sejours, ...nouveauxSejours])
       setNouveauxSejours([{ entree: '', sortie: '' }])
     } else {
-      alert("Merci de remplir toutes les dates avant de valider.")
+      alert("Merci de remplir au moins les dates d'entrée.")
     }
   }
 
@@ -60,13 +60,32 @@ export default function App() {
 
     for (let sejour of sejours) {
       const entreeDate = new Date(sejour.entree)
-      const sortieDate = new Date(sejour.sortie)
-      if (sortieDate >= dateLimite) {
+      const sortieDate = sejour.sortie ? new Date(sejour.sortie) : null
+
+      if (sortieDate) {
+        if (sortieDate >= dateLimite) {
+          const debut = entreeDate < dateLimite ? dateLimite : entreeDate
+          totalJours += Math.floor((sortieDate - debut) / (1000 * 60 * 60 * 24)) + 1
+        }
+      } else {
         const debut = entreeDate < dateLimite ? dateLimite : entreeDate
-        totalJours += Math.floor((sortieDate - debut) / (1000 * 60 * 60 * 24)) + 1
+        const maintenant = new Date(dateReference)
+        totalJours += Math.floor((maintenant - debut) / (1000 * 60 * 60 * 24)) + 1
       }
     }
+
     return totalJours
+  }
+
+  const calculerDateMaxRetour = () => {
+    const dernier = sejours[sejours.length - 1]
+    if (dernier && dernier.entree && !dernier.sortie && joursRestants > 0) {
+      const entreeDate = new Date(dernier.entree)
+      const dateRetourMax = new Date(entreeDate)
+      dateRetourMax.setDate(dateRetourMax.getDate() + joursRestants - 1)
+      return dateRetourMax.toISOString().split('T')[0]
+    }
+    return null
   }
 
   const joursUtilises = calculerJoursValides()
@@ -113,6 +132,11 @@ export default function App() {
         <p>🕒 Jours restants : <strong style={{ color: joursRestants < 0 ? 'red' : 'black' }}>{joursRestants >= 0 ? joursRestants : 0}</strong></p>
         {joursRestants < 0 && <p style={{ color: 'red' }}>🚨 Vous avez dépassé la limite autorisée !</p>}
         {avertissement && <p style={{ color: 'orange' }}>⚠️ Attention, il ne vous reste que {joursRestants} jours !</p>}
+        {calculerDateMaxRetour() && (
+          <p style={{ color: '#007bff' }}>
+            🧳 Vous devez quitter Schengen au plus tard le : <strong>{calculerDateMaxRetour()}</strong>
+          </p>
+        )}
       </div>
 
       <h2>📋 Historique des séjours</h2>
@@ -122,13 +146,13 @@ export default function App() {
             {enEdition === i ? (
               <div style={{ display: 'flex', gap: 10 }}>
                 <input type='date' value={edition.entree} onChange={e => setEdition({ ...edition, entree: e.target.value })} />
-                <input type='date' value={edition.sortie} onChange={e => setEdition({ ...edition, sortie: e.target.value })} />
+                <input type='date' value={edition.sortie || ''} onChange={e => setEdition({ ...edition, sortie: e.target.value })} />
                 <button onClick={validerEdition}>💾 Sauvegarder</button>
                 <button onClick={() => setEnEdition(null)}>❌ Annuler</button>
               </div>
             ) : (
               <>
-                Du <strong>{s.entree}</strong> au <strong>{s.sortie}</strong>
+                Du <strong>{s.entree}</strong> au <strong>{s.sortie || '...'}</strong>
                 <button onClick={() => lancerEdition(i)} style={{ marginLeft: 10 }}>✏️ Modifier</button>
                 <button onClick={() => supprimerSejour(i)} style={{ marginLeft: 5 }}>🗑 Supprimer</button>
               </>
@@ -139,4 +163,5 @@ export default function App() {
     </div>
   )
 }
+
 
